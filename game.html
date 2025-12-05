@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inferno Blaster - NexusPortal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .flames-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 100%, #ff0000 0%, #000 70%);
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.5; }
+        }
+
+        .game-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000, 0 0 60px #ff4500;
+            margin-bottom: 1rem;
+            letter-spacing: 4px;
+            animation: glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 30px #ff0000, 0 0 60px #ff4500; }
+            50% { text-shadow: 0 0 50px #ff0000, 0 0 100px #ff4500; }
+        }
+
+        #gameCanvas {
+            border: 4px solid #ff0000;
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a0000 100%);
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.8);
+            cursor: crosshair;
+            display: block;
+        }
+
+        .hud {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.3), rgba(255, 69, 0, 0.2));
+            padding: 0.8rem 2rem;
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 120px;
+        }
+
+        .stat-label {
+            color: #ffd700;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-value {
+            color: #fff;
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .controls-info {
+            margin-top: 1rem;
+            text-align: center;
+            color: #ffd700;
+            font-size: 1.1rem;
+        }
+
+        .btn {
+            padding: 1rem 3rem;
+            font-size: 1.3rem;
+            background: linear-gradient(45deg, #ff0000, #ff4500);
+            color: #fff;
+            border: 3px solid #ffd700;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            margin: 1rem 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(255, 0, 0, 0.9);
+        }
+
+        .btn:active {
+            transform: translateY(-2px);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a0000, #0a0a0a);
+            padding: 3rem;
+            border: 4px solid #ff0000;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 0 100px rgba(255, 0, 0, 0.8);
+        }
+
+        .modal h2 {
+            font-size: 3rem;
+            color: #ff0000;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px #ff0000;
+        }
+
+        .modal p {
+            font-size: 1.5rem;
+            color: #ffd700;
+            margin: 1rem 0;
+        }
+
+        .high-score {
+            font-size: 2rem;
+            color: #ffd700;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px #ffd700;
+        }
+
+        #startScreen {
+            display: flex;
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particle-explode 0.6s ease-out forwards;
+        }
+
+        @keyframes particle-explode {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .combo {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            animation: combo-float 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes combo-float {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1.5);
+            }
+        }
+
+        @media (max-width: 900px) {
+            #gameCanvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="flames-bg"></div>
+    
+    <div class="game-wrapper">
+        <h1>🔥 INFERNO BLASTER 🔥</h1>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="hud">
+            <div class="stat-box">
+                <div class="stat-label">SCORE</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">COMBO</div>
+                <div class="stat-value" id="combo">0x</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">LIVES</div>
+                <div class="stat-value" id="lives">❤️❤️❤️</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">LEVEL</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+        </div>
+
+        <div class="controls-info">
+            🎯 <strong>CLICK</strong> enemies to destroy them! | ⚡ Build combos for bonus points!
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div class="modal" id="startScreen">
+        <div class="modal-content">
+            <h2>👹 INFERNO BLASTER 👹</h2>
+            <p>Demons are invading from hell!</p>
+            <p>Click fast to destroy them before they reach the bottom!</p>
+            <div class="high-score">High Score: <span id="highScore">0</span></div>
+            <button class="btn" id="startBtn">⚔️ START BATTLE</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div class="modal" id="gameOverScreen">
+        <div class="modal-content">
+            <h2>💀 DEFEATED 💀</h2>
+            <p>The demons have won...</p>
+            <div class="high-score">Final Score: <span id="finalScore">0</span></div>
+            <div class="high-score">High Score: <span id="finalHighScore">0</span></div>
+            <button class="btn" id="restartBtn">🔥 FIGHT AGAIN</button>
+            <button class="btn" onclick="window.location.href='index.html'" style="background: linear-gradient(45deg, #ffd700, #ff8c00);">← BACK TO NEXUSPORTAL</button>
+        </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div class="modal" id="pauseScreen">
+        <div class="modal-content">
+            <h2>⏸️ PAUSED</h2>
+            <p>Take a breath from the inferno...</p>
+            <button class="btn" id="resumeBtn">▶️ RESUME</button>
+            <button class="btn" onclick="window.location.href='index.html'" style="background: linear-gradient(45deg, #ffd700, #ff8c00);">← BACK TO NEXUSPORTAL</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let gameState = {
+            running: false,
+            paused: false,
+            score: 0,
+            lives: 3,
+            level: 1,
+            combo: 0,
+            comboTimer: 0,
+            highScore: localStorage.getItem('infernoBlasterHighScore') || 0,
+            enemies: [],
+            particles: [],
+            powerUps: [],
+            spawnRate: 1200,
+            enemySpeed: 1.5,
+            lastSpawn: 0,
+            animationFrame: null
+        };
+
+        // Enemy class with better AI
+        class Enemy {
+            constructor(type = 'normal') {
+                this.x = Math.random() * (canvas.width - 50) + 25;
+                this.y = -50;
+                this.size = type === 'boss' ? 50 : 35;
+                this.speed = gameState.enemySpeed + Math.random() * 1.5;
+                this.type = type;
+                this.health = type === 'boss' ? 3 : 1;
+                this.maxHealth = this.health;
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = 0.05 + Math.random() * 0.05;
+                
+                if (type === 'boss') {
+                    this.emoji = '👹';
+                    this.points = 50;
+                } else if (type === 'fast') {
+                    this.emoji = '🔥';
+                    this.speed *= 1.8;
+                    this.points = 15;
+                } else {
+                    this.emoji = ['👿', '💀', '😈', '👻'][Math.floor(Math.random() * 4)];
+                    this.points = 10;
+                }
+            }
+
+            update(deltaTime) {
+                this.y += this.speed;
+                this.wobble += this.wobbleSpeed;
+                this.x += Math.sin(this.wobble) * 1.5;
+            }
+
+            draw() {
+                // Health bar for bosses
+                if (this.type === 'boss' && this.health < this.maxHealth) {
+                    const barWidth = this.size;
+                    const barHeight = 5;
+                    const healthPercent = this.health / this.maxHealth;
+                    
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fillRect(this.x - barWidth/2, this.y - this.size - 10, barWidth, barHeight);
+                    
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(this.x - barWidth/2, this.y - this.size - 10, barWidth * healthPercent, barHeight);
+                }
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(this.emoji, this.x + 2, this.y + 2);
+
+                // Main emoji with glow
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff0000';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(this.emoji, this.x, this.y);
+                ctx.shadowBlur = 0;
+            }
+
+            isClicked(mouseX, mouseY) {
+                const distance = Math.sqrt(
+                    Math.pow(mouseX - this.x, 2) + 
+                    Math.pow(mouseY - this.y, 2)
+                );
+                return distance < this.size;
+            }
+
+            hit() {
+                this.health--;
+                return this.health <= 0;
+            }
+        }
+
+        // Particle effects
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.life = 1;
+                this.decay = 0.02;
+                this.size = Math.random() * 5 + 2;
+                this.color = color;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // gravity
+                this.life -= this.decay;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // Power-up system
+        class PowerUp {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 30;
+                this.speed = 2;
+                this.emoji = '⭐';
+                this.rotation = 0;
+            }
+
+            update() {
+                this.y += this.speed;
+                this.rotation += 0.1;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffd700';
+                ctx.fillText(this.emoji, 0, 0);
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            }
+
+            isClicked(mouseX, mouseY) {
+                const distance = Math.sqrt(
+                    Math.pow(mouseX - this.x, 2) + 
+                    Math.pow(mouseY - this.y, 2)
+                );
+                return distance < this.size;
+            }
+        }
+
+        // Create explosion effect
+        function createExplosion(x, y, color = '#ffd700') {
+            for (let i = 0; i < 15; i++) {
+                gameState.particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // Spawn enemy
+        function spawnEnemy(currentTime) {
+            if (currentTime - gameState.lastSpawn > gameState.spawnRate) {
+                let enemyType = 'normal';
+                
+                // Boss spawn every 15 enemies
+                if (gameState.enemies.length > 0 && gameState.enemies.length % 15 === 0) {
+                    enemyType = 'boss';
+                }
+                // Fast enemy 20% chance
+                else if (Math.random() < 0.2) {
+                    enemyType = 'fast';
+                }
+                
+                gameState.enemies.push(new Enemy(enemyType));
+                gameState.lastSpawn = currentTime;
+
+                // Spawn power-up occasionally
+                if (Math.random() < 0.1) {
+                    gameState.powerUps.push(new PowerUp(
+                        Math.random() * canvas.width,
+                        -30
+                    ));
+                }
+            }
+        }
+
+        // Update game logic
+        function update(currentTime) {
+            if (!gameState.running || gameState.paused) return;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(10, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Spawn enemies
+            spawnEnemy(currentTime);
+
+            // Update and draw particles
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                gameState.particles[i].update();
+                gameState.particles[i].draw();
+                if (gameState.particles[i].isDead()) {
+                    gameState.particles.splice(i, 1);
+                }
+            }
+
+            // Update and draw power-ups
+            for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+                const powerUp = gameState.powerUps[i];
+                powerUp.update();
+                powerUp.draw();
+                
+                if (powerUp.y > canvas.height) {
+                    gameState.powerUps.splice(i, 1);
+                }
+            }
+
+            // Update and draw enemies
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = gameState.enemies[i];
+                enemy.update();
+                enemy.draw();
+
+                // Check if reached bottom
+                if (enemy.y > canvas.height + 50) {
+                    gameState.enemies.splice(i, 1);
+                    gameState.lives--;
+                    gameState.combo = 0;
+                    updateHUD();
+                    
+                    if (gameState.lives <= 0) {
+                        endGame();
+                        return;
+                    }
+                }
+            }
+
+            // Decay combo
+            if (gameState.combo > 0) {
+                gameState.comboTimer--;
+                if (gameState.comboTimer <= 0) {
+                    gameState.combo = 0;
+                    updateHUD();
+                }
+            }
+
+            // Level progression
+            if (gameState.score > gameState.level * 100) {
+                levelUp();
+            }
+
+            gameState.animationFrame = requestAnimationFrame(update);
+        }
+
+        // Level up
+        function levelUp() {
+            gameState.level++;
+            gameState.spawnRate = Math.max(400, gameState.spawnRate - 100);
+            gameState.enemySpeed += 0.3;
+            updateHUD();
+            
+            // Visual feedback
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Update HUD
+        function updateHUD() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('combo').textContent = gameState.combo + 'x';
+            document.getElementById('level').textContent = gameState.level;
+            
+            const hearts = '❤️'.repeat(gameState.lives);
+            document.getElementById('lives').textContent = hearts || '💀';
+            
+            document.getElementById('highScore').textContent = gameState.highScore;
+        }
+
+        // Handle click
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.running || gameState.paused) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            let hit = false;
+
+            // Check power-ups first
+            for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+                if (gameState.powerUps[i].isClicked(mouseX, mouseY)) {
+                    gameState.powerUps.splice(i, 1);
+                    gameState.lives = Math.min(3, gameState.lives + 1);
+                    gameState.score += 25;
+                    createExplosion(mouseX, mouseY, '#ffd700');
+                    updateHUD();
+                    hit = true;
+                    break;
+                }
+            }
+
+            // Check enemies
+            if (!hit) {
+                for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                    if (gameState.enemies[i].isClicked(mouseX, mouseY)) {
+                        const enemy = gameState.enemies[i];
+                        
+                        if (enemy.hit()) {
+                            // Enemy destroyed
+                            gameState.enemies.splice(i, 1);
+                            gameState.combo++;
+                            gameState.comboTimer = 180; // 3 seconds at 60fps
+                            
+                            const comboBonus = Math.floor(gameState.combo / 5);
+                            const points = enemy.points + (comboBonus * 5);
+                            gameState.score += points;
+                            
+                            createExplosion(mouseX, mouseY, '#ff0000');
+                            
+                            // Show combo text
+                            if (gameState.combo > 1) {
+                                showComboText(mouseX, mouseY, `${gameState.combo}x COMBO!`);
+                            }
+                            
+                            updateHUD();
+                        } else {
+                            // Boss damaged
+                            createExplosion(mouseX, mouseY, '#ff4500');
+                        }
+                        
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+
+            // Miss feedback
+            if (!hit) {
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        });
+
+        // Show combo text
+        function showComboText(x, y, text) {
+            const comboEl = document.createElement('div');
+            comboEl.className = 'combo';
+            comboEl.textContent = text;
+            comboEl.style.left = x + 'px';
+            comboEl.style.top = y + 'px';
+            document.body.appendChild(comboEl);
+            
+            setTimeout(() => comboEl.remove(), 1000);
+        }
+
+        // Start game
+        function startGame() {
+            gameState = {
+                running: true,
+                paused: false,
+                score: 0,
+                lives: 3,
+                level: 1,
+                combo: 0,
+                comboTimer: 0,
+                highScore: localStorage.getItem('infernoBlasterHighScore') || 0,
+                enemies: [],
+                particles: [],
+                powerUps: [],
+                spawnRate: 1200,
+                enemySpeed: 1.5,
+                lastSpawn: 0,
+                animationFrame: null
+            };
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('pauseScreen').style.display = 'none';
+            
+            updateHUD();
+            update(0);
+        }
+
+        // End game
+        function endGame() {
+            gameState.running = false;
+            cancelAnimationFrame(gameState.animationFrame);
+            
+            // Update high score
+            if (gameState.score > gameState.highScore) {
+                gameState.highScore = gameState.score;
+                localStorage.setItem('infernoBlasterHighScore', gameState.highScore);
+            }
+            
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalHighScore').textContent = gameState.highScore;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+
+        // Pause game
+        function togglePause() {
+            if (!gameState.running) return;
+            
+            gameState.paused = !gameState.paused;
+            
+            if (gameState.paused) {
+                document.getElementById('pauseScreen').style.display = 'flex';
+            } else {
+                document.getElementById('pauseScreen').style.display = 'none';
+                update(performance.now());
+            }
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('resumeBtn').addEventListener('click', togglePause);
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Escape' || e.code === 'KeyP') {
+                togglePause();
+            }
+        });
+
+        // Initialize
+        updateHUD();
+    </script>
+</body>
+</html>
